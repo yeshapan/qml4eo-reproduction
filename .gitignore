@@ -1,0 +1,38 @@
+
+#macOS Specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+
+#project data & weights (massive dataset may bloat/fail git repo)
+#ignore all data files, but keep the folder structure
+data/*
+!data/.gitkeep
+
+#ignore saved model weights
+*.pt
+*.pth
+*.h5
+
+#python & environments
+__pycache__/
+*.py[cod]
+*$py.class
+
+#virtual environments
+venv/
+env/
+qml_env/
+.venv/
+
+#environment variables (secrets/API keys)
+.env
+
+
+#jupyter notebooks
+.ipynb_checkpoints/
+
+#IDEs or editors
+.vscode/
+.idea/
