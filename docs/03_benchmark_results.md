@@ -23,7 +23,7 @@ This doc is to track the empirical results of replicating the QML4EO baselines
 
 | Image Size | Total Parameters | Epochs | Final Training Loss | Final Val Accuracy | Time/Epoch |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| 64x64 | **5,418** | 5 | **0.7445** | **74.31%** | ~14s |
+| 64x64 | **5,418** | 5 | **0.8030** | **73.24%** | ~13s |
 
 ---
 

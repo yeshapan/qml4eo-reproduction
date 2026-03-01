@@ -16,9 +16,9 @@ A structured exploration, reproduction and analysis of **Quantum Machine Learnin
 QML4EO-reproduction
 ├── data/                       #raw + pre-processed EO datasets (e.g., EuroSAT subset)
 ├── docs/                       #reports and documentation
-│   ├── setup_and_prereqs.md
+│   ├── setup_prereqs.md
 │   ├── dataset_details.md
-│   ├── structured_report.md    #hyperparameters, observed metrics, and discrepancies
+│   ├── benchmark_results.md    #hyperparameters, observed metrics, and discrepancies
 │   └── ablation_study.md       #parameter scaling and stability analysis
 ├── experiments/                #executable scripts for training and testing
 │   ├── train_hybrid.py         
