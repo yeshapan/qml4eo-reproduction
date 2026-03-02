@@ -6,7 +6,7 @@ This guide breaks down exactly what we've built in the `src/quantum/` and `src/m
 To understand why we need a "Hybrid" model we first need to understand the limitations of modern quantum hardware (the NISQ era). 
 
 A standard EuroSAT image is 64x64 pixels with 3 color channels (12,288 total values). Current quantum computers don't have enough stable qubits to encode an entire image directly. 
-* **The Solution:** We use a classical Convolutional Neural Network (CNN) as a "feature extractor." The CNN takes the massive 64x64 image, compresses it and learns the most important patterns; reducing it down to a tiny vector of numbers (e.g., 4 values). 
+* **The Solution:** We use a classical Convolutional Neural Network (CNN) as a "feature extractor". The CNN takes the massive 64x64 image, compresses it and learns the most important patterns; reducing it down to a tiny vector of numbers (e.g., 4 values). 
 * We then feed these 4 highly concentrated values into a 4-qubit quantum circuit.
 
 
