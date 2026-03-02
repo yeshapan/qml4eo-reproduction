@@ -29,8 +29,22 @@ This doc is to track the empirical results of replicating the QML4EO baselines
 
 #### **2. Hybrid Quantum-Classical Metrics (HQCNN)**
 
-*Pending execution of PennyLane/Qiskit circuits*
+This baseline utilizes a minimal 4-qubit, 1-layer quantum circuit to establish a lower bound for QML performance and verify gradient flow.*
 
-| Qubits | Quantum Layers | Image Size | Total Parameters | Final Val Accuracy | Sim-to-Real Discrepancy |
+| Qubits | Quantum Layers | Image Size | Total Parameters | Final Val Accuracy | Time/Epoch |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| TBD | TBD | TBD | TBD | TBD | TBD |
+| 4 | 1 | 64x64 | **5,274** | **47.56%** | ~26s |
+
+**The Parameter Discrepancy: Why is the Quantum Model Smaller?**
+It is counter-intuitive that adding a quantum circuit reduces the total parameter count (5,418 classical vs 5,274 hybrid). This occurs due to the **information bottleneck** required to fit classical data into a small quantum state.
+
+* **Classical CNN Final Layers (330 parameters):**
+    * The fully connected layer maps 32 channels directly to 10 classes: (32 x 10 weights) + 10 biases = 330 parameters.
+
+* **Hybrid QCNN Final Layers (186 parameters):**
+    * **Bottleneck Layer:** Maps 32 channels down to 4 qubits: (32 x 4 weights) + 4 biases = 132 parameters.
+    * **Quantum Ansatz:** 1 layer across 4 qubits requires 4 parameters (one trainable rotation per qubit).
+    * **Final Classification Layer:** Maps 4 qubits to 10 classes: (4 x 10 weights) + 10 biases = 50 parameters
+
+* **Math:** 330 - 186 = 144 
+    Subtracting 144 from the classical total of 5,418 yields exactly 5,274 trainable parameters. The lower accuracy (47.56%) is a direct result of forcing the model to compress its learned features through this tiny 4-qubit bottleneck in only 5 epochs.
