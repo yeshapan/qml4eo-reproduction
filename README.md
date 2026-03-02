@@ -3,11 +3,11 @@
 Rebuilding and stress-testing a Hybrid Quantum Convolutional Neural Network (HQCNN) for Earth Observation. This repository benchmarks quantum models against classical baselines. It breaks down circuit performance on the EuroSAT dataset through three core experiments: qubit scaling, circuit depth and the entanglement paradox.
 
 ### **Core Achievements & Experiments**
-* **The Classical Baseline:** Built a lightweight PyTorch CNN. This set a strict performance floor of 73.94% accuracy on 64x64 RGB EuroSAT images.
-* **Quantum Integration:** Successfully bridged PyTorch and PennyLane. Proved that classical optimizers can push gradients through a quantum simulator.
-* **Experiment 1 (Qubit Scaling):** Tested the quantum information bottleneck. Found that widening the bottleneck (from 2 to 8 qubits) raises the learning ceiling but exponentially chokes GPU simulation time.
-* **Experiment 2 (Circuit Depth):** Tested quantum expressivity. Proved that adding just 8 trainable parameters (jumping from 1 to 3 ansatz layers) boosts accuracy by over 16%.
-* **Experiment 3 (Entanglement Strategy):** Physically removed CNOT gates to test quantum advantage. Discovered that unentangled circuits train much faster in short 5-epoch windows. Entangled circuits have higher ultimate capacity but suffer from highly unstable, non-convex loss landscapes.
+* **The Classical Baseline:** Established a PyTorch CNN baseline, achieving 73.94% accuracy on a 64x64 RGB EuroSAT subset.
+* **Quantum Integration:** Demonstrated successful gradient flow across a hybrid PyTorch-PennyLane architecture using standard classical optimizers.
+* **Experiment 1 (Qubit Scaling):** Investigated the quantum information bottleneck. Observations suggest that scaling from 2 to 8 qubits lifts the learning ceiling but incurs exponential computational cost in classical simulation.
+* **Experiment 2 (Circuit Depth):** Evaluated quantum expressivity. Empirical results indicate that adding just 8 parameters (scaling from 1 to 3 ansatz layers) improved validation accuracy by over 16% under a strict 5-epoch limit.
+* **Experiment 3 (Entanglement Strategy):** Ablated CNOT gates to assess entanglement utility. Preliminary findings show unentangled circuits converge faster in early epochs (smoother loss landscape), whereas entangled circuits suggest higher expressivity but exhibit severe non-convex instability during early training.
 
 ### **Repository Structure**
 The codebase strictly separates classical benchmarks, pure quantum math and the hybrid models that glue them together. All training logs and mathematical proofs are saved in the Jupyter notebooks.

@@ -9,7 +9,7 @@ This doc is to track the empirical results of replicating the QML4EO baselines
 | Parameter | Value | Notes |
 | :--- | :--- | :--- |
 | **Dataset** | EuroSAT (RGB) | 27,000 images, 10 classes |
-| **Train/Val Split** | 80% / 20% | Seed: 42 |
+| **Train/Val Split** | 80% / 20% | Seed: 42, 100, 2026 |
 | **Batch Size** | 32 | Standardized across all models |
 | **Optimizer** | Adam | Learning Rate: 0.001 |
 | **Loss Function** | CrossEntropyLoss | |
@@ -23,7 +23,7 @@ This doc is to track the empirical results of replicating the QML4EO baselines
 
 | Image Size | Total Parameters | Epochs | Final Training Loss | Final Val Accuracy | Time/Epoch |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| 64x64 | **5,418** | 5 | **0.7809** | **73.94%** | ~15s |
+| 64x64 | **5,418** | 15 | **0.59** | **79.15% ± 0.63%** | ~13s |
 
 ---
 
@@ -31,7 +31,7 @@ This doc is to track the empirical results of replicating the QML4EO baselines
 
 The baseline utilizes a minimal 4-qubit, 1-layer quantum circuit to establish a lower bound for QML performance and verify gradient flow.*
 
-| Qubits | Quantum Layers | Image Size | Total Parameters | Final Val Accuracy | Time/Epoch |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| 4 | 1 | 64x64 | **5,274** | **47.56%** | ~26s |
+| Qubits | Quantum Layers | Image Size | Total Parameters | Epochs | Final Val Accuracy (Mean ± Std) | Time/Epoch |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 4 | 1 | 64x64 | **5,274** | 15 | **66.08% ± 2.42%** | ~25s |
 
