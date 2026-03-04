@@ -18,36 +18,35 @@ So, we must rigorously prove that every single qubit and quantum operation (gate
 
 ---
 
-> NOTE: Please refer to `notebooks/03_ablation_study.ipynb` too see results of each experiment (and their analysis)
+> NOTE: Please refer to `notebooks/03_ablation.ipynb` too see results of each experiment (and their analysis)
 
 #### **1. Qubit Scaling Analysis**
 *Testing the performance impact of encoding the classical data into larger quantum states. (Baseline: 4 Qubits)*
 
-| Qubits | Circuit Depth | Total Params | Training Time/Epoch | Final Val Accuracy |
-| :---: | :---: | :---: | :---: | :---: |
-| 2 | 1 | 5,186 | ~19s | 42.46% |
-| 4 | 1 | 5,274 | ~26s | 47.56% |
-| 6 | 1 | 5,362 | ~31s | 46.70% |
-| 8 | 1 | 5,450 | ~38s | 48.02% |
+*Evaluated across 3 seeds for 15 epochs. Assesses the tradeoff between quantum state size and classical simulation cost.*
 
-**Analysis:**
-* Restricting the bottleneck to 2 qubits physically destroys too much feature data, resulting in the lowest accuracy. 
-* Scaling past 4 qubits offers diminishing returns within a short 5-epoch window. The optimizer simply needs more training time to navigate larger quantum spaces.
-* Simulation cost scales aggressively. Simulating 8 qubits nearly doubles the training time per epoch compared to 2 qubits.
+| Qubits | Ansatz Layers | Total Parameters | Final Mean Accuracy | Std Dev | Speed (it/s) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 2 | 1 | 5,186 | **49.56%** | ± 1.62% | ~33 |
+| 4 | 1 | 5,274 | **66.08%** | ± 2.42% | ~26 |
+| 6 | 1 | 5,362 | **70.25%** | ± 1.75% | ~21 |
+| 8 | 1 | 5,450 | **69.83%** | ± 2.78% | ~16 |
+
+**Key Observation:** Performance plateaus after 6 qubits. The 8-qubit space is too vast for a 1-layer ansatz to navigate effectively within 15 epochs, resulting in identical accuracy but severe simulation penalties.
 
 #### **2. Circuit Depth (Ansatz Layers)**
 *Testing the expressivity of the quantum layer by repeating the trainable operations. Repeating the ansatz gives the model more parameters to tune; but it also increases the risk of vanishing gradients (Barren Plateaus)*
 
-| Qubits | Ansatz Layers | Total Params | Training Time/Epoch | Final Val Accuracy |
-| :---: | :---: | :---: | :---: | :---: |
-| 4 | 1 | 5,274 | ~26s | 47.56% |
-| 4 | 2 | 5,278 | ~30s | 48.69% |
-| 4 | 3 | 5,282 | ~35s | 63.69% |
+*Evaluated across 3 seeds for 15 epochs. Assesses whether deeper circuits yield better expressivity or trigger Barren Plateaus. Bottleneck locked at 4 qubits.*
 
-**Analysis:**
-* Adding just 8 total parameters (jumping to 3 layers) boosted final accuracy by over 16%. Quantum expressivity relies heavily on depth rather than raw parameter count.
-* The 2-layer model exhibited high instability, losing validation accuracy in the final epoch despite a dropping training loss. This proves quantum loss landscapes are highly non-convex and prone to overshooting.
-* Training time increases linearly. Each new ansatz layer consistently adds 4 to 5 seconds per epoch on the GPU.
+| Ansatz Layers | Total Parameters | Final Mean Accuracy | Std Dev | Speed (it/s) |
+| :---: | :---: | :---: | :---: | :---: |
+| 1 (Baseline) | 5,274 | **66.08%** | ± 2.42% | ~26 |
+| 2 | 5,278 | **69.69%** | ± 4.03% | ~21 |
+| 3 | 5,282 | **72.38%** | ± 3.02% | ~18 |
+
+**Key Observation:** Deepening the circuit from 1 to 3 layers yields a massive ~6% accuracy boost at the cost of only 8 total parameters. While there is no evidence of completely flat Barren Plateaus at this depth; the visible accuracy dips during training indicate a highly rugged, non-convex loss landscape. The classical optimizer is able to learn (but it occasionally struggles to smoothly navigate the complex quantum parameter space).
+
 
 #### **3. Entanglement Strategy**
 *Assessing the role of quantum entanglement in feature extraction. Entanglement is what theoretically gives QML an edge over classical models*
