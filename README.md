@@ -12,7 +12,7 @@ All metrics represent the mean and standard deviation across three independent r
 | **Hybrid QCNN (4-Qubit Baseline)** | 5,274 | **66.08%** | 2.42% |
 
 **Ablation Study Highlights**
-| Experiment | Configuration | Parameters | Mean Acc | Std Dev |
+| Experiment | Configuration | Parameters | Mean Accuracy | Std Dev (±) |
 | :--- | :--- | :---: | :---: | :---: |
 | **Qubit Scaling** | 2 Qubits | 5,186 | 49.56% | 1.62% |
 | | 6 Qubits | 5,362 | 70.25% | 1.75% |
@@ -22,7 +22,7 @@ All metrics represent the mean and standard deviation across three independent r
 | **Entanglement** | None (No CNOTs) | 5,186 | **76.40%** | 0.82% |
 | | Basic (Ring) | 5,274 | 61.44% | 2.25% |
 
-### **Key Insights**
+### **Open Questions**
 * **The "Lazy Quantum" Hypothesis:** 
     * Our unentangled 4-qubit model hit 76.40% accuracy - which is close to our purely classical CNN baseline (79.15%). 
     * Since an unentangled quantum layer essentially just acts as a series of independent rotations; is the classical PyTorch feature extractor doing all the heavy lifting? 
@@ -34,7 +34,7 @@ All metrics represent the mean and standard deviation across three independent r
     * Finding the optimal ratio between qubit width and circuit depth is a critical next step.
 
 * **The 2-Layer Variance Anomaly:** 
-    * During Experiment 2, the 2-layer setup showed weirdly high instability across our different seeds ($\pm$4.03% standard deviation) compared to the 1-layer ($\pm$2.42%) and 3-layer ($\pm$3.02%) models. 
+    * During Experiment 2, the 2-layer setup showed weirdly high instability across our different seeds (±4.03% standard deviation) compared to the 1-layer (±2.42%) and 3-layer (±3.02%) models. 
     * Does the quantum loss landscape go through an extremely rugged "awkward phase" at intermediate depths before settling into a more stable, trainable structure?
 
 * **Do classical and quantum gradients need to be decoupled?** 
