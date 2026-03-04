@@ -45,24 +45,24 @@ So, we must rigorously prove that every single qubit and quantum operation (gate
 | 2 | 5,278 | **69.69%** | ± 4.03% | ~21 |
 | 3 | 5,282 | **72.38%** | ± 3.02% | ~18 |
 
-**Key Observation:** Deepening the circuit from 1 to 3 layers yields a massive ~6% accuracy boost at the cost of only 8 total parameters. While there is no evidence of completely flat Barren Plateaus at this depth; the visible accuracy dips during training indicate a highly rugged, non-convex loss landscape. The classical optimizer is able to learn (but it occasionally struggles to smoothly navigate the complex quantum parameter space).
+**Key Observation:** Deepening the circuit from 1 to 3 layers yields a ~6% accuracy boost at the cost of only 8 total parameters. 
+While there is no evidence of completely flat Barren Plateaus at this depth; the visible accuracy dips during training indicate a highly rugged, non-convex loss landscape. 
+The classical optimizer is able to learn (but it occasionally struggles to smoothly navigate the complex quantum parameter space).
 
 
 #### **3. Entanglement Strategy**
 *Assessing the role of quantum entanglement in feature extraction. Entanglement is what theoretically gives QML an edge over classical models*
 
-| Entanglement Type | Qubits | Depth | Final Val Accuracy | Notes |
-| :--- | :---: | :---: | :---: | :--- |
-| **None** (No CNOTs) | 4 | 1 | 68.22% | Acts as a classical linear baseline |
-| **Basic** (Ring) | 4 | 1 | 48.78% | Standard tutorial baseline |
-| **Full** (All-to-All) | 4 | 1 | TBD | Skipped to conserve compute resources |
+*Evaluated across 3 seeds for 15 epochs. Tests if theoretical quantum expressivity translates to empirical accuracy. Bottleneck locked at 4 qubits, 1 layer.*
 
-**Analysis:**
-* Removing entanglement completely improved short-term accuracy by ~20%. 
-* Unentangled circuits possess smoother loss landscapes and train faster. 
-* Entangled circuits introduce landscape complexity. They train slower but offer higher expressivity ceilings when scaled in depth.
+| Entanglement Type | Final Mean Accuracy | Std Dev |
+| :--- | :---: | :---: |
+| None (No CNOTs) | **76.40%** | ± 0.82% |
+| Basic (CNOT Ring) | **61.44%** | ± 2.25% |
+
+**Key Observation:** The "Entanglement Paradox" is confirmed. The unentangled circuit outperformed the entangled baseline by ~15%. While entanglement provides higher theoretical expressivity, it creates a highly rugged loss landscape that classical optimizers struggle to navigate efficiently within 15 epochs.
 
 #### **4. Key Takeaways**
-* **Optimal Configuration (Resource Constrained):** For a strict 5-epoch limit; a shallow, unentangled circuit performs best. For maximum expressivity; a 4-qubit, 3-layer entangled circuit provides the best balance of parameter efficiency and accuracy.
-* **The Information Bottleneck:** Qubit count must be carefully balanced. 2 qubits physically destroy too much feature data. 8 qubits mathematically overwhelm classical GPU simulators.
-* **Diminishing Returns:** Adding quantum operations without scaling training epochs leads to underfitting. The optimizer simply needs more time to navigate the complex Hilbert space.
+* **The Entanglement Paradox:** Unentangled quantum circuits are significantly more effective for near-term QML. They provide a smooth loss landscape, allowing classical optimizers to easily reach ~76.4% accuracy. Entanglement creates a highly rugged, non-convex parameter space that Adam struggles to navigate within 15 epochs.
+* **The Expressivity Sweet Spot:** If an entangled circuit is required, deepening it from 1 to 3 layers is highly parameter-efficient. It yields a ~6% accuracy boost at the cost of only 8 total parameters without triggering flat Barren Plateaus.
+* **The Simulation Wall & Bottleneck:** Qubit scaling suffers from severe diminishing returns. Squeezing 32 classical features into 2 qubits destroys too much spatial data (~49% accuracy). Performance plateaus at 6 qubits (~70%). Pushing to 8 qubits yields zero additional accuracy but exponentially slows down GPU simulation speed.
