@@ -8,7 +8,9 @@ def get_eurosat_dataloaders(
     batch_size: int = 32,   # Number of images per batch
     img_size: int = 64,     # Target size for resizing images
     val_split: float = 0.2, # Fraction of data to use for validation
-    seed: int = 42          # Random seed for reproducible splits
+    seed: int = 42,         # Random seed for reproducible splits
+    num_workers: int = 2,   # Dynamically accept num_workers from notebook
+    pin_memory: bool = True # Dynamically accept pin_memory from notebook
 ):
     
     # Ensure the data directory exists exactly as defined in the repo structure
@@ -37,7 +39,7 @@ def get_eurosat_dataloaders(
     
     print(f"Downloading + Loading EuroSAT dataset into {data_dir}..")
 
-    # Load two separate instances of the dataset so we can apply the different transformation pipelines for train and val
+    # Load two separate instances of the dataset so we can apply the different transformation pipelines for train and
     full_train_dataset = datasets.EuroSAT(root=data_dir, download=True, transform=train_transform)
     full_val_dataset = datasets.EuroSAT(root=data_dir, download=True, transform=val_transform)
     
@@ -58,8 +60,21 @@ def get_eurosat_dataloaders(
     generator = torch.Generator().manual_seed(seed)
     _, val_subset = random_split(full_val_dataset, [train_size, val_size], generator=generator)
     
-    train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-    val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+    train_loader = DataLoader(
+        train_subset, 
+        batch_size=batch_size, 
+        shuffle=True, 
+        num_workers=num_workers, 
+        pin_memory=pin_memory
+    )
+    
+    val_loader = DataLoader(
+        val_subset, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        num_workers=num_workers, 
+        pin_memory=pin_memory
+    )
     
     print(f"Dataset loaded successfully! Total: {total_size} | Train: {train_size} | Val: {val_size}")
     

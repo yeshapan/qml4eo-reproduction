@@ -10,18 +10,27 @@ from src.quantum.qnode import create_qnode
 class HybridQCNN(nn.Module):
     """
     Late Hybrid Scheme leveraging a frozen ResNet18 backbone.
+    IMPROVEMENT: Supports loading fine-tuned, domain-specific weights.
     """
-    def __init__(self, num_classes=10, num_qubits=4, num_layers=1, entanglement_type="none"):
+    def __init__(self, num_classes=10, num_qubits=4, num_layers=1, entanglement_type="none", pretrained_weights_path=None):
         super(HybridQCNN, self).__init__()
         
-        # Load pre-trained ResNet18
-        weights = models.ResNet18_Weights.DEFAULT
-        resnet = models.resnet18(weights=weights)
+        # Load base ResNet18
+        resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         
+        # Replace the head to match EuroSAT classes (so the state_dict aligns)
+        in_features = resnet.fc.in_features
+        resnet.fc = nn.Linear(in_features, num_classes)
+        
+        # Load our custom, fine-tuned EuroSAT weights if provided
+        if pretrained_weights_path:
+            resnet.load_state_dict(torch.load(pretrained_weights_path, map_location='cpu'))
+            print(f"Loaded fine-tuned classical weights from: {pretrained_weights_path}")
+            
         # Isolate the feature extractor by slicing off the final Linear layer
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
         
-        # Freeze the classical feature extractor weights to stabilize QML training
+        # STRICTLY FREEZE the feature extractor to prevent Classical Masking
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
             
@@ -37,26 +46,26 @@ class HybridQCNN(nn.Module):
         self.fc = nn.Linear(num_qubits, num_classes)
 
     def forward(self, x):
-        # 1. classical feature extraction
+        # 1. Classical Feature Extraction
         x = self.feature_extractor(x)
         x = x.view(x.size(0), -1) 
         
-        # 2. dimensionality reduction
+        # 2. Dimensionality Reduction
         x = self.bottleneck(x)
         
-        # 3. Tanh scaling (bound to [-pi, pi])
+        # 3. Tanh Scaling (Bound to [-pi, pi])
         x = torch.tanh(x) * math.pi 
         
-        # 4. quantum forward pass
+        # 4. Quantum Forward Pass
         x = self.qlayer(x)
         
-        # 5. final classification
+        # 5. Final Classification
         x = self.fc(x)
         return x
 
 def train_decoupled_hqcnn(model, train_loader, val_loader, epochs=15, device='cpu'):
     """
-    Decoupled Learning Rates for Hybrid optimization
+    Decoupled Learning Rates for Hybrid optimization.
     """
     criterion = nn.CrossEntropyLoss()
     
@@ -70,7 +79,7 @@ def train_decoupled_hqcnn(model, train_loader, val_loader, epochs=15, device='cp
             else:
                 classical_params.append(param)
                 
-    # Independent optimizers: 1e-3 for classical, 1e-4 for quantum
+    # Independent optimizers: 1e-3 for classical bottleneck, 1e-4 for sensitive quantum weights
     optimizer = torch.optim.Adam([
         {'params': classical_params, 'lr': 0.001},  
         {'params': quantum_params, 'lr': 0.0001}    

@@ -5,6 +5,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import random
 import numpy as np
+from torch.cuda.amp import GradScaler, autocast
 
 def set_seed(seed=42):
     """
@@ -56,6 +57,9 @@ def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device
     
     model.to(device)
     
+    # Initialize the AMP Gradient Scaler for 2x faster float16 math
+    scaler = GradScaler()
+    
     history = {'train_loss': [], 'val_acc': []}
     
     for epoch in range(epochs):
@@ -67,10 +71,16 @@ def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device
             images, labels = images.to(device), labels.to(device)
             
             optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            
+            # Run the forward pass in 16-bit precision
+            with autocast():
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                
+            # Scale the loss and run the backward pass
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             
             running_loss += loss.item()
             pbar.set_postfix({'loss': f"{loss.item():.4f}"})
@@ -84,7 +94,11 @@ def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device
         with torch.no_grad():
             for images, labels in val_loader:
                 images, labels = images.to(device), labels.to(device)
-                outputs = model(images)
+                
+                # Evaluate in 16-bit precision as well
+                with autocast():
+                    outputs = model(images)
+                    
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
