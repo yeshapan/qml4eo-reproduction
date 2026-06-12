@@ -33,7 +33,5 @@ qml_env/
 # IDEs or editors
 .vscode/
 .idea/
-
-# Antigravity/Gemini IDE
 .gemini/
 .antigravity/

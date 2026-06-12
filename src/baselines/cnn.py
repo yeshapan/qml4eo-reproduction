@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torchvision.models as models
 import torch.optim as optim
 from tqdm import tqdm
 import random
@@ -8,50 +8,51 @@ import numpy as np
 
 def set_seed(seed=42):
     """
-    locks all random number generators for perfect reproducibility.
+    Locks all random number generators for perfect reproducibility
     """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    #forces cuDNN to use deterministic algorithms
+    # forces cuDNN to use deterministic algorithms
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-class ClassicalCNN(nn.Module):
+class ResNet18Baseline(nn.Module):
     """
-    A lightweight classical CNN baseline.
-    Uses Adaptive Average Pooling to remain invariant to input image resolution,
-    allowing seamless comparison when images are heavily downscaled for quantum circuits.
+    Replaced the previous approach of using custom 2-layer CNN with ResNet18.
+    Transfer learning utilizes pre-trained weights from ImageNet.
+    This allows the model to immediately recognize complex shapes and textures 
+    without having to learn them from scratch on the smaller EuroSAT dataset.
     """
     def __init__(self, num_classes: int = 10):
-        super(ClassicalCNN, self).__init__()
-        # Input channels: 3 (RGB), Output channels: 16
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
-        # Input channels: 16, Output channels: 32
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
+        super(ResNet18Baseline, self).__init__()
         
-        #adaptive pool ensures the output is always 1x1 per channel before the fully connected layer 
-        #(to prevent dimension mismatch errors)
-        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        # Load the pre-trained ResNet18 architecture and weights
+        weights = models.ResNet18_Weights.DEFAULT
+        self.resnet = models.resnet18(weights=weights)
         
-        self.fc = nn.Linear(32, num_classes)
+        # Freeze all layers in the backbone to isolate feature extraction and match HybridQCNN behavior
+        for param in self.resnet.parameters():
+            param.requires_grad = False
+            
+        '''
+        The default ResNet is built for 1000 ImageNet classes
+        We dynamically grab the input size of its final layer (512) and replace it with a new Linear layer targeting our 10 EuroSAT classes
+        '''
+        in_features = self.resnet.fc.in_features
+        self.resnet.fc = nn.Linear(in_features, num_classes)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.global_pool(x)
-        x = x.view(-1, 32) #flatten
-        x = self.fc(x)
-        return x
+        return self.resnet(x)
 
-def train_baseline(model, train_loader, val_loader, epochs=10, lr=0.001, device='cpu'):
-    """
-    Standard PyTorch training loop.
-    """
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.001, device='cpu'):
+    '''
+    Standard PyTorch training loop for classical architectures
+    '''
+    criterion = nn.CrossEntropyLoss()   # Loss Function
+    # Only optimize parameters that require gradients (the unfrozen linear head)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr) # Optimizer
     
     model.to(device)
     
@@ -61,7 +62,6 @@ def train_baseline(model, train_loader, val_loader, epochs=10, lr=0.001, device=
         model.train()
         running_loss = 0.0
         
-        #training loop with progress bar
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
         for images, labels in pbar:
             images, labels = images.to(device), labels.to(device)
@@ -78,7 +78,6 @@ def train_baseline(model, train_loader, val_loader, epochs=10, lr=0.001, device=
         avg_train_loss = running_loss / len(train_loader)
         history['train_loss'].append(avg_train_loss)
         
-        #validation loop
         model.eval()
         correct = 0
         total = 0
@@ -93,6 +92,6 @@ def train_baseline(model, train_loader, val_loader, epochs=10, lr=0.001, device=
         val_acc = 100 * correct / total
         history['val_acc'].append(val_acc)
         
-        print(f"Epoch {epoch+1} Summary -> Train Loss: {avg_train_loss:.4f} | Val Accuracy: {val_acc:.2f}%")
+        print(f"Epoch {epoch+1} Summary → Train Loss: {avg_train_loss:.4f} | Val Accuracy: {val_acc:.2f}%")
         
     return history
