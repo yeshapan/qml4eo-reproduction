@@ -22,19 +22,19 @@ class ResNet18Baseline(nn.Module):
     """
     Replaced the previous approach of using custom 2-layer CNN with ResNet18.
     Transfer learning utilizes pre-trained weights from ImageNet.
-    This allows the model to immediately recognize complex shapes and textures 
-    without having to learn them from scratch on the smaller EuroSAT dataset.
+    This allows the model to immediately recognize complex shapes and textures.
     """
-    def __init__(self, num_classes: int = 10):
+    def __init__(self, num_classes: int = 10, freeze_backbone: bool = False):
         super(ResNet18Baseline, self).__init__()
         
         # Load the pre-trained ResNet18 architecture and weights
         weights = models.ResNet18_Weights.DEFAULT
         self.resnet = models.resnet18(weights=weights)
         
-        # Freeze all layers in the backbone to isolate feature extraction and match HybridQCNN behavior
-        for param in self.resnet.parameters():
-            param.requires_grad = False
+        # Toggle to allow Fine-Tuning. Unfreezing allows the ImageNet filters to adapt to EuroSAT satellite textures.
+        if freeze_backbone:
+            for param in self.resnet.parameters():
+                param.requires_grad = False
             
         '''
         The default ResNet is built for 1000 ImageNet classes
@@ -46,13 +46,13 @@ class ResNet18Baseline(nn.Module):
     def forward(self, x):
         return self.resnet(x)
 
-def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.001, device='cpu'):
+def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device='cpu'):
     '''
     Standard PyTorch training loop for classical architectures
     '''
     criterion = nn.CrossEntropyLoss()   # Loss Function
-    # Only optimize parameters that require gradients (the unfrozen linear head)
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr) # Optimizer
+    # Optimizes all unfrozen parameters. Note the lower default LR for fine-tuning.
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr) 
     
     model.to(device)
     
