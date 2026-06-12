@@ -5,7 +5,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import random
 import numpy as np
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 
 def set_seed(seed=42):
     """
@@ -32,7 +32,8 @@ class ResNet18Baseline(nn.Module):
         weights = models.ResNet18_Weights.DEFAULT
         self.resnet = models.resnet18(weights=weights)
         
-        # Toggle to allow Fine-Tuning. Unfreezing allows the ImageNet filters to adapt to EuroSAT satellite textures.
+        # IMPROVEMENT: Toggle to allow Fine-Tuning. Unfreezing allows the 
+        # ImageNet filters to adapt to EuroSAT satellite textures.
         if freeze_backbone:
             for param in self.resnet.parameters():
                 param.requires_grad = False
@@ -57,8 +58,8 @@ def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device
     
     model.to(device)
     
-    # Initialize the AMP Gradient Scaler for 2x faster float16 math
-    scaler = GradScaler()
+    # Initialize the AMP Gradient Scaler using PyTorch 2.x syntax
+    scaler = GradScaler('cuda')
     
     history = {'train_loss': [], 'val_acc': []}
     
@@ -72,8 +73,8 @@ def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device
             
             optimizer.zero_grad()
             
-            # Run the forward pass in 16-bit precision
-            with autocast():
+            # Run the forward pass in 16-bit precision using PyTorch 2.x syntax
+            with autocast('cuda'):
                 outputs = model(images)
                 loss = criterion(outputs, labels)
                 
@@ -95,8 +96,8 @@ def train_baseline(model, train_loader, val_loader, epochs=15, lr=0.0001, device
             for images, labels in val_loader:
                 images, labels = images.to(device), labels.to(device)
                 
-                # Evaluate in 16-bit precision as well
-                with autocast():
+                # Evaluate in 16-bit precision using PyTorch 2.x syntax
+                with autocast('cuda'):
                     outputs = model(images)
                     
                 _, predicted = torch.max(outputs.data, 1)
