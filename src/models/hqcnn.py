@@ -10,27 +10,38 @@ from src.quantum.qnode import create_qnode
 class HybridQCNN(nn.Module):
     """
     Late Hybrid Scheme leveraging a frozen ResNet18 backbone.
-    IMPROVEMENT: Supports loading fine-tuned, domain-specific weights.
+    Fixed: Supports loading fine-tuned, domain-specific weights and cleans the state_dict keys to resolve prefix mismatches.
     """
     def __init__(self, num_classes=10, num_qubits=4, num_layers=1, entanglement_type="none", pretrained_weights_path=None):
         super(HybridQCNN, self).__init__()
         
-        # Load base ResNet18
+        # 1. Load base ResNet18
         resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         
-        # Replace the head to match EuroSAT classes (so the state_dict aligns)
+        # 2. Replace the head to match EuroSAT classes 
         in_features = resnet.fc.in_features
         resnet.fc = nn.Linear(in_features, num_classes)
         
-        # Load our custom, fine-tuned EuroSAT weights if provided
+        # 3. Load our custom, fine-tuned EuroSAT weights if provided
         if pretrained_weights_path:
-            resnet.load_state_dict(torch.load(pretrained_weights_path, map_location='cpu'))
+            raw_state_dict = torch.load(pretrained_weights_path, map_location='cpu')
+            
+            # Intercept and clean the dictionary keys to remove the 'resnet.' wrapper prefix
+            cleaned_state_dict = {}
+            for key, value in raw_state_dict.items():
+                if key.startswith('resnet.'):
+                    cleaned_key = key.replace('resnet.', '', 1)
+                    cleaned_state_dict[cleaned_key] = value
+                else:
+                    cleaned_state_dict[key] = value
+                    
+            resnet.load_state_dict(cleaned_state_dict)
             print(f"Loaded fine-tuned classical weights from: {pretrained_weights_path}")
             
-        # Isolate the feature extractor by slicing off the final Linear layer
+        # 4. Isolate the feature extractor by slicing off the final Linear layer
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
         
-        # STRICTLY FREEZE the feature extractor to prevent Classical Masking
+        # 5. STRICTLY FREEZE the feature extractor to prevent Classical Masking
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
             
