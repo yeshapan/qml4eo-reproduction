@@ -10,7 +10,8 @@ from src.quantum.qnode import create_qnode
 class HybridQCNN(nn.Module):
     """
     Late Hybrid Scheme leveraging a frozen ResNet18 backbone.
-    Fixed: Supports loading fine-tuned, domain-specific weights and cleans the state_dict keys to resolve prefix mismatches.
+    Supports loading fine-tuned, domain-specific weights and cleans the state_dict.
+    Implements a CPU-Quantum Bridge to resolve PyTorch/PennyLane device mismatches.
     """
     def __init__(self, num_classes=10, num_qubits=4, num_layers=1, entanglement_type="none", pretrained_weights_path=None):
         super(HybridQCNN, self).__init__()
@@ -18,15 +19,14 @@ class HybridQCNN(nn.Module):
         # 1. Load base ResNet18
         resnet = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         
-        # 2. Replace the head to match EuroSAT classes 
+        # 2. Replace the head to match EuroSAT classes
         in_features = resnet.fc.in_features
         resnet.fc = nn.Linear(in_features, num_classes)
         
-        # 3. Load our custom, fine-tuned EuroSAT weights if provided
+        # 3. Load custom, fine-tuned EuroSAT weights if provided
         if pretrained_weights_path:
             raw_state_dict = torch.load(pretrained_weights_path, map_location='cpu')
             
-            # Intercept and clean the dictionary keys to remove the 'resnet.' wrapper prefix
             cleaned_state_dict = {}
             for key, value in raw_state_dict.items():
                 if key.startswith('resnet.'):
@@ -36,41 +36,47 @@ class HybridQCNN(nn.Module):
                     cleaned_state_dict[key] = value
                     
             resnet.load_state_dict(cleaned_state_dict)
-            print(f"Loaded fine-tuned classical weights from: {pretrained_weights_path}")
             
-        # 4. Isolate the feature extractor by slicing off the final Linear layer
+        # 4. Isolate the feature extractor
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
         
-        # 5. STRICTLY FREEZE the feature extractor to prevent Classical Masking
+        # 5. STRICTLY FREEZE the feature extractor
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
             
-        # The Classical Bottleneck: Compress to the exact number of available qubits
+        # 6. The Classical Bottleneck
         self.bottleneck = nn.Linear(512, num_qubits)
         
-        # Pass the string argument to the QNode creator
+        # 7. Quantum Layer
         qnode = create_qnode(num_qubits, num_layers, entanglement_type=entanglement_type)
         weight_shapes = {"weights": (num_layers, num_qubits)}
         self.qlayer = qml.qnn.TorchLayer(qnode, weight_shapes)
         
-        # Final Classical Classifier
+        # 8. Final Classical Classifier
         self.fc = nn.Linear(num_qubits, num_classes)
 
     def forward(self, x):
-        # 1. Classical Feature Extraction
+        # Classical Feature Extraction (GPU)
         x = self.feature_extractor(x)
         x = x.view(x.size(0), -1) 
         
-        # 2. Dimensionality Reduction
+        # Dimensionality Reduction (GPU)
         x = self.bottleneck(x)
-        
-        # 3. Tanh Scaling (Bound to [-pi, pi])
         x = torch.tanh(x) * math.pi 
         
-        # 4. Quantum Forward Pass
+        # CPU-QUANTUM BRIDGE
+        # PennyLane's default simulator initializes states on the CPU
+        # We temporarily cast the data to CPU, execute the circuit and then move back to GPU
+        current_device = x.device
+        x = x.cpu()
+        
+        # Quantum Forward Pass (CPU)
         x = self.qlayer(x)
         
-        # 5. Final Classification
+        # Move back to GPU
+        x = x.to(current_device)
+        
+        # Final Classification (GPU)
         x = self.fc(x)
         return x
 
@@ -80,6 +86,12 @@ def train_decoupled_hqcnn(model, train_loader, val_loader, epochs=15, device='cp
     """
     criterion = nn.CrossEntropyLoss()
     
+    # 1. Device Placement Strategy MUST happen before optimizer initialization
+    model.to(device)
+    # Force the quantum layer to stay on the CPU to prevent mismatch with PennyLane's state vector
+    model.qlayer.to('cpu')
+    
+    # 2. Gather Parameters
     quantum_params = []
     classical_params = []
     
@@ -90,13 +102,12 @@ def train_decoupled_hqcnn(model, train_loader, val_loader, epochs=15, device='cp
             else:
                 classical_params.append(param)
                 
-    # Independent optimizers: 1e-3 for classical bottleneck, 1e-4 for sensitive quantum weights
+    # 3. Independent optimizers
     optimizer = torch.optim.Adam([
         {'params': classical_params, 'lr': 0.001},  
         {'params': quantum_params, 'lr': 0.0001}    
     ])
     
-    model.to(device)
     history = {'train_loss': [], 'val_acc': []}
     
     for epoch in range(epochs):
