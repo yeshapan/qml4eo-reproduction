@@ -8,7 +8,7 @@ The codebase strictly separates classical benchmarks, pure quantum math and the 
 ```
 QML4EO-reproduction/
 ├── data/                       # Local storage for EuroSAT dataset
-├── docs/                       # Formal experimental reports and findings
+├── documentation/              # Formal experimental reports and findings
 ├── notebooks/                  # Executable training logs and proofs
 ├── src/                        # Core source code modules
 │   ├── baselines/              # Classical neural network architectures (cnn.py)
